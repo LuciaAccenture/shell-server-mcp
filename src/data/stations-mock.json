@@ -1,0 +1,70 @@
+{
+  "stations": [
+    {
+      "id": "shell-001",
+      "name": "Shell A Coruña Centro",
+      "location": {
+        "city": "A Coruña",
+        "address": "Av. de Arteixo, 15",
+        "coordinates": { "lat": 43.3623, "lon": -8.4115 }
+      },
+      "distanceFromOrigin": 5,
+      "distanceToDestination": 595,
+      "prices": {
+        "unleaded95": 1.459,
+        "unleaded98": 1.599,
+        "diesel": 1.389
+      },
+      "offers": [
+        {
+          "type": "discount",
+          "description": "5 cents/liter off with Shell Card",
+          "validUntil": "2026-03-31"
+        }
+      ],
+      "amenities": ["Shop", "Coffee", "Restrooms"]
+    },
+    {
+      "id": "shell-002",
+      "name": "Shell Lugo Norte",
+      "location": {
+        "city": "Lugo",
+        "address": "N-VI, km 512",
+        "coordinates": { "lat": 43.0097, "lon": -7.5567 }
+      },
+      "distanceFromOrigin": 95,
+      "distanceToDestination": 505,
+      "prices": {
+        "unleaded95": 1.439,
+        "unleaded98": 1.579,
+        "diesel": 1.369
+      },
+      "offers": [],
+      "amenities": ["Shop", "Restrooms", "Rest area"]
+    },
+    {
+      "id": "shell-003",
+      "name": "Shell Madrid Sur",
+      "location": {
+        "city": "Madrid",
+        "address": "A-2, km 15",
+        "coordinates": { "lat": 40.4168, "lon": -3.7038 }
+      },
+      "distanceFromOrigin": 590,
+      "distanceToDestination": 10,
+      "prices": {
+        "unleaded95": 1.499,
+        "unleaded98": 1.639,
+        "diesel": 1.419
+      },
+      "offers": [
+        {
+          "type": "promotion",
+          "description": "Free coffee with refuel >40L",
+          "validUntil": "2026-02-28"
+        }
+      ],
+      "amenities": ["Shop", "Coffee", "Restrooms", "Car wash"]
+    }
+  ]
+}
