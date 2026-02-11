@@ -2,37 +2,68 @@ import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { tools, executeTool } from "./tools/stations.js";
+import { z } from "zod";
+import { executeTool } from "./tools/stations.js";
+
+// Define Zod schemas for tool inputs
+const findStationsSchema = z.object({
+  origin: z.string().describe("Origin city (e.g., 'A Coruña')"),
+  destination: z.string().describe("Destination city (e.g., 'Madrid')"),
+  fuelType: z.enum(["unleaded95", "unleaded98", "diesel"]).optional().describe("Type of fuel"),
+});
+
+const getBestOffersSchema = z.object({
+  route: z.string().optional().describe("Route in format 'Origin-Destination'"),
+});
+
+const getCheapestStationsSchema = z.object({
+  fuelType: z.enum(["unleaded95", "unleaded98", "diesel"]).describe("Type of fuel to compare prices"),
+  limit: z.number().optional().describe("Maximum number of stations to return (default: 3)"),
+});
 
 function createShellStationsServer() {
   const server = new McpServer({ name: "shell-stations", version: "0.1.0" });
 
-  // Register each Shell station tool
-  tools.forEach((tool) => {
-    server.tool(tool.name, tool.description, tool.inputSchema, async (args) => {
-      try {
-        const result = await executeTool(tool.name, args);
-        return {
-          content: [
-            {
-              type: "text",
-              text: JSON.stringify(result, null, 2),
-            },
-          ],
-        };
-      } catch (error) {
-        return {
-          content: [
-            {
-              type: "text",
-              text: `Error: ${error.message}`,
-            },
-          ],
-          isError: true,
-        };
-      }
-    });
-  });
+  // Register find_stations_on_route tool
+  server.tool(
+    "find_stations_on_route",
+    "Find Shell gas stations along a route between two cities",
+    findStationsSchema,
+    async (args) => {
+      const result = await executeTool("find_stations_on_route", args);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    }
+  );
+
+  // Register get_best_offers tool
+  server.tool(
+    "get_best_offers",
+    "Get gas stations with active offers and promotions",
+    getBestOffersSchema,
+    async (args) => {
+      const result = await executeTool("get_best_offers", args);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    }
+  );
+
+  // Register get_cheapest_stations tool
+  server.tool(
+    "get_cheapest_stations",
+    "Get the cheapest gas stations sorted by fuel price",
+    getCheapestStationsSchema,
+    async (args) => {
+      console.log("get_cheapest_stations called with:", args);
+      const result = await executeTool("get_cheapest_stations", args);
+      console.log("Result:", result);
+      return {
+        content: [{ type: "text", text: JSON.stringify(result, null, 2) }],
+      };
+    }
+  );
 
   return server;
 }
