@@ -80,8 +80,9 @@ function determineToolAndArgs(query) {
 
   // Check for route-based queries
   if (lowerQuery.includes("from") && lowerQuery.includes("to")) {
-    const fromMatch = lowerQuery.match(/from\s+([a-záéíóúñ\s]+?)(?:\s+to)/i);
-    const toMatch = lowerQuery.match(/to\s+([a-záéíóúñ\s]+?)(?:\s*$|\.|\?)/i);
+    // Match on original query to preserve case
+    const fromMatch = query.match(/from\s+([A-Za-záéíóúñÁÉÍÓÚÑ\s]+?)\s+to/i);
+    const toMatch = query.match(/to\s+([A-Za-záéíóúñÁÉÍÓÚÑ\s]+?)(?:\s*$|\.|\?)/i);
 
     if (fromMatch && toMatch) {
       const origin = fromMatch[1].trim();
@@ -279,7 +280,9 @@ function formatResponse(toolName, result) {
     }
   } else if (toolName === "get_cheapest_stations") {
     html += `<div style="margin-bottom: 16px;"><strong>Cheapest ${result.fuelType} prices</strong></div>`;
-    html += `<div style="margin-bottom: 16px;">Lowest price: €${result.lowestPrice.toFixed(3)}/L</div>`;
+    if (result.lowestPrice) {
+      html += `<div style="margin-bottom: 16px;">Lowest price: €${result.lowestPrice.toFixed(3)}/L</div>`;
+    }
     result.cheapestStations.forEach((station) => {
       html += formatStationCard(station, result.fuelType);
     });
