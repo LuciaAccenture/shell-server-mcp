@@ -43,7 +43,7 @@ function createTodoServer() {
           text: todoHtml,
         },
       ],
-    })
+    }),
   );
 
   registerAppTool(
@@ -63,7 +63,7 @@ function createTodoServer() {
       const todo = { id: `todo-${nextId++}`, title, completed: false };
       todos = [...todos, todo];
       return replyWithTodos(`Added "${todo.title}".`);
-    }
+    },
   );
 
   registerAppTool(
@@ -86,11 +86,11 @@ function createTodoServer() {
       }
 
       todos = todos.map((task) =>
-        task.id === id ? { ...task, completed: true } : task
+        task.id === id ? { ...task, completed: true } : task,
       );
 
       return replyWithTodos(`Completed "${todo.title}".`);
-    }
+    },
   );
 
   return server;
@@ -119,7 +119,9 @@ const httpServer = createServer(async (req, res) => {
   }
 
   if (req.method === "GET" && url.pathname === "/") {
-    res.writeHead(200, { "content-type": "text/plain" }).end("Todo MCP server is running!");
+    res
+      .writeHead(200, { "content-type": "text/plain" })
+      .end("Todo MCP server is running!");
     return;
   }
 
@@ -154,6 +156,6 @@ const httpServer = createServer(async (req, res) => {
   res.writeHead(404).end("Not Found");
 });
 
-httpServer.listen(port, () => {
-  console.log(`Todo MCP server listening on http://localhost:${port}${MCP_PATH}`);
+httpServer.listen(port, "0.0.0.0", () => {
+  console.log(`MCP server listening on port ${port}${MCP_PATH}`);
 });
