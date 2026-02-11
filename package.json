@@ -1,9 +1,9 @@
 {
-  "name": "todo-mcp-server",
+  "name": "shell-server-mcp",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "start": "node server.js"
+    "start": "node src/server.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",
