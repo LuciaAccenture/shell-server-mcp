@@ -44,6 +44,72 @@
     },
     {
       "id": "shell-003",
+      "name": "Shell Ponferrada Este",
+      "location": {
+        "city": "Ponferrada",
+        "address": "A-6, km 385",
+        "coordinates": { "lat": 42.5502, "lon": -6.5979 }
+      },
+      "distanceFromOrigin": 215,
+      "distanceToDestination": 385,
+      "prices": {
+        "unleaded95": 1.429,
+        "unleaded98": 1.569,
+        "diesel": 1.359
+      },
+      "offers": [
+        {
+          "type": "promotion",
+          "description": "10% discount on shop purchases with fuel >30L",
+          "validUntil": "2026-03-15"
+        }
+      ],
+      "amenities": ["Shop", "Coffee", "Restrooms", "Car wash", "Rest area"]
+    },
+    {
+      "id": "shell-004",
+      "name": "Shell Benavente Sur",
+      "location": {
+        "city": "Benavente",
+        "address": "A-6, km 270",
+        "coordinates": { "lat": 42.0035, "lon": -5.6786 }
+      },
+      "distanceFromOrigin": 330,
+      "distanceToDestination": 270,
+      "prices": {
+        "unleaded95": 1.449,
+        "unleaded98": 1.589,
+        "diesel": 1.379
+      },
+      "offers": [],
+      "amenities": ["Shop", "Restrooms"]
+    },
+    {
+      "id": "shell-005",
+      "name": "Shell Valladolid Oeste",
+      "location": {
+        "city": "Valladolid",
+        "address": "A-6, km 185",
+        "coordinates": { "lat": 41.6522, "lon": -4.7245 }
+      },
+      "distanceFromOrigin": 415,
+      "distanceToDestination": 185,
+      "prices": {
+        "unleaded95": 1.469,
+        "unleaded98": 1.609,
+        "diesel": 1.399
+      },
+      "offers": [
+        {
+          "type": "loyalty",
+          "description": "Double points with Shell Go+ loyalty program",
+          "validUntil": "2026-04-30"
+        }
+      ],
+      "amenities": ["Shop", "Coffee", "Restrooms", "Car wash"]
+    },
+    {
+      "id": "shell-006",
       "name": "Shell Madrid Sur",
       "location": {
         "city": "Madrid",

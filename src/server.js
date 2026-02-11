@@ -1,97 +1,38 @@
 import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
-import {
-  registerAppResource,
-  registerAppTool,
-  RESOURCE_MIME_TYPE,
-} from "@modelcontextprotocol/ext-apps/server";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { z } from "zod";
+import { tools, executeTool } from "./tools/stations.js";
 
-const todoHtml = readFileSync("public/todo-widget.html", "utf8");
+function createShellStationsServer() {
+  const server = new McpServer({ name: "shell-stations", version: "0.1.0" });
 
-const addTodoInputSchema = {
-  title: z.string().min(1),
-};
-
-const completeTodoInputSchema = {
-  id: z.string().min(1),
-};
-
-let todos = [];
-let nextId = 1;
-
-const replyWithTodos = (message) => ({
-  content: message ? [{ type: "text", text: message }] : [],
-  structuredContent: { tasks: todos },
-});
-
-function createTodoServer() {
-  const server = new McpServer({ name: "todo-app", version: "0.1.0" });
-
-  registerAppResource(
-    server,
-    "todo-widget",
-    "ui://widget/todo.html",
-    {},
-    async () => ({
-      contents: [
-        {
-          uri: "ui://widget/todo.html",
-          mimeType: RESOURCE_MIME_TYPE,
-          text: todoHtml,
-        },
-      ],
-    }),
-  );
-
-  registerAppTool(
-    server,
-    "add_todo",
-    {
-      title: "Add todo",
-      description: "Creates a todo item with the given title.",
-      inputSchema: addTodoInputSchema,
-      _meta: {
-        ui: { resourceUri: "ui://widget/todo.html" },
-      },
-    },
-    async (args) => {
-      const title = args?.title?.trim?.() ?? "";
-      if (!title) return replyWithTodos("Missing title.");
-      const todo = { id: `todo-${nextId++}`, title, completed: false };
-      todos = [...todos, todo];
-      return replyWithTodos(`Added "${todo.title}".`);
-    },
-  );
-
-  registerAppTool(
-    server,
-    "complete_todo",
-    {
-      title: "Complete todo",
-      description: "Marks a todo as done by id.",
-      inputSchema: completeTodoInputSchema,
-      _meta: {
-        ui: { resourceUri: "ui://widget/todo.html" },
-      },
-    },
-    async (args) => {
-      const id = args?.id;
-      if (!id) return replyWithTodos("Missing todo id.");
-      const todo = todos.find((task) => task.id === id);
-      if (!todo) {
-        return replyWithTodos(`Todo ${id} was not found.`);
+  // Register each Shell station tool
+  tools.forEach((tool) => {
+    server.tool(tool.name, tool.description, tool.inputSchema, async (args) => {
+      try {
+        const result = await executeTool(tool.name, args);
+        return {
+          content: [
+            {
+              type: "text",
+              text: JSON.stringify(result, null, 2),
+            },
+          ],
+        };
+      } catch (error) {
+        return {
+          content: [
+            {
+              type: "text",
+              text: `Error: ${error.message}`,
+            },
+          ],
+          isError: true,
+        };
       }
-
-      todos = todos.map((task) =>
-        task.id === id ? { ...task, completed: true } : task,
-      );
-
-      return replyWithTodos(`Completed "${todo.title}".`);
-    },
-  );
+    });
+  });
 
   return server;
 }
@@ -119,9 +60,32 @@ const httpServer = createServer(async (req, res) => {
   }
 
   if (req.method === "GET" && url.pathname === "/") {
-    res
-      .writeHead(200, { "content-type": "text/plain" })
-      .end("Todo MCP server is running!");
+    try {
+      const html = readFileSync("public/index.html", "utf8");
+      res.writeHead(200, { "content-type": "text/html" }).end(html);
+    } catch (error) {
+      res.writeHead(500).end("Error loading page");
+    }
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/style.css") {
+    try {
+      const css = readFileSync("public/style.css", "utf8");
+      res.writeHead(200, { "content-type": "text/css" }).end(css);
+    } catch (error) {
+      res.writeHead(404).end("Not Found");
+    }
+    return;
+  }
+
+  if (req.method === "GET" && url.pathname === "/app.js") {
+    try {
+      const js = readFileSync("public/app.js", "utf8");
+      res.writeHead(200, { "content-type": "application/javascript" }).end(js);
+    } catch (error) {
+      res.writeHead(404).end("Not Found");
+    }
     return;
   }
 
@@ -130,7 +94,7 @@ const httpServer = createServer(async (req, res) => {
     res.setHeader("Access-Control-Allow-Origin", "*");
     res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id");
 
-    const server = createTodoServer();
+    const server = createShellStationsServer();
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: undefined,
       enableJsonResponse: true,
@@ -157,5 +121,5 @@ const httpServer = createServer(async (req, res) => {
 });
 
 httpServer.listen(port, "0.0.0.0", () => {
-  console.log(`MCP server listening on port ${port}${MCP_PATH}`);
+  console.log(`Shell MCP server listening on port ${port}${MCP_PATH}`);
 });

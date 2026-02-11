@@ -1,4 +1,13 @@
-import stationsMock from "../data/stations-mock.json";
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+
+const stationsMock = JSON.parse(
+  readFileSync(join(__dirname, "../data/stations-mock.json"), "utf8")
+);
 
 export const tools = [
   {
@@ -32,10 +41,9 @@ export const tools = [
       properties: {
         route: {
           type: "string",
-          description: "Route in format 'Origin-Destination'",
+          description: "Route in format 'Origin-Destination' (optional)",
         },
       },
-      required: ["route"],
     },
   },
   {
@@ -59,42 +67,25 @@ export const tools = [
   },
 ];
 
-type FuelType = "unleaded95" | "unleaded98" | "diesel";
-
-type FindStationsArgs = {
-  origin: string;
-  destination: string;
-  fuelType?: FuelType;
-};
-
-type GetBestOffersArgs = {
-  route: string;
-};
-
-type GetCheapestStationsArgs = {
-  fuelType: FuelType;
-  limit?: number;
-};
-
 // Function to execute tools
-export async function executeTool(name: string, args: unknown) {
+export async function executeTool(name, args) {
   switch (name) {
     case "find_stations_on_route":
-      return findStations(args as FindStationsArgs);
+      return findStations(args);
     case "get_best_offers":
-      return getBestOffers(args as GetBestOffersArgs);
+      return getBestOffers(args);
     case "get_cheapest_stations":
-      return getCheapestStations(args as GetCheapestStationsArgs);
+      return getCheapestStations(args);
     default:
       throw new Error(`Tool not found: ${name}`);
   }
 }
 
-function findStations(args: FindStationsArgs) {
+function findStations(args) {
   const { origin, destination, fuelType = "diesel" } = args;
 
-  const stations = stationsMock.stations.sort(
-    (a, b) => a.prices[fuelType] - b.prices[fuelType],
+  const stations = [...stationsMock.stations].sort(
+    (a, b) => a.prices[fuelType] - b.prices[fuelType]
   );
 
   return {
@@ -104,9 +95,9 @@ function findStations(args: FindStationsArgs) {
   };
 }
 
-function getBestOffers(args: GetBestOffersArgs) {
+function getBestOffers(args) {
   const stationsWithOffers = stationsMock.stations.filter(
-    (s) => s.offers.length > 0,
+    (s) => s.offers.length > 0
   );
 
   return {
@@ -115,10 +106,10 @@ function getBestOffers(args: GetBestOffersArgs) {
   };
 }
 
-function getCheapestStations(args: GetCheapestStationsArgs) {
+function getCheapestStations(args) {
   const { fuelType, limit = 3 } = args;
 
-  const sorted = stationsMock.stations
+  const sorted = [...stationsMock.stations]
     .sort((a, b) => a.prices[fuelType] - b.prices[fuelType])
     .slice(0, limit);
 

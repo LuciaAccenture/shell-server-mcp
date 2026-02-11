@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Shell Gas Stations Finder</title>
+    <link rel="stylesheet" href="/style.css" />
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <div class="logo">
+          <div class="shell-logo">🐚</div>
+          <h1>Shell Gas Stations Finder</h1>
+        </div>
+        <p class="subtitle">Find the best Shell stations on your route</p>
+      </header>
+
+      <div class="chat-container" id="chatContainer">
+        <div class="welcome-message">
+          <h2>Welcome! 👋</h2>
+          <p>Ask me anything about Shell gas stations along your route.</p>
+          <div class="example-queries">
+            <p class="examples-title">Try these examples:</p>
+            <button class="example-btn" data-query="Find stations from A Coruña to Madrid">
+              🗺️ Find stations from A Coruña to Madrid
+            </button>
+            <button class="example-btn" data-query="Show me the cheapest diesel prices">
+              💰 Show me the cheapest diesel prices
+            </button>
+            <button class="example-btn" data-query="Which stations have active offers?">
+              🎁 Which stations have active offers?
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="input-container">
+        <input
+          type="text"
+          id="userInput"
+          placeholder="Type your question here..."
+          autocomplete="off"
+        />
+        <button id="sendBtn">
+          <span>Send</span>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" />
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <script type="module" src="/app.js"></script>
+  </body>
+</html>
