@@ -1,161 +1,226 @@
 import { createServer } from "node:http";
 import { readFileSync } from "node:fs";
-import {
-  registerAppResource,
-  registerAppTool,
-  RESOURCE_MIME_TYPE,
-} from "@modelcontextprotocol/ext-apps/server";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
 
-const todoHtml = readFileSync("public/todo-widget.html", "utf8");
+// Load Shell stations data
+const stationsMock = JSON.parse(
+  readFileSync("src/data/stations-mock.json", "utf8"),
+);
 
-const addTodoInputSchema = {
-  title: z.string().min(1),
+// Tool schemas using Zod
+const findStationsInputSchema = {
+  origin: z.string().describe("Origin city (e.g., 'A Coruña')"),
+  destination: z.string().describe("Destination city (e.g., 'Madrid')"),
+  fuelType: z
+    .enum(["unleaded95", "unleaded98", "diesel"])
+    .optional()
+    .describe("Type of fuel"),
 };
 
-const completeTodoInputSchema = {
-  id: z.string().min(1),
+const getBestOffersInputSchema = {
+  route: z.string().describe("Route in format 'Origin-Destination'"),
 };
 
-let todos = [];
-let nextId = 1;
+const getCheapestStationsInputSchema = {
+  fuelType: z
+    .enum(["unleaded95", "unleaded98", "diesel"])
+    .describe("Type of fuel to compare prices"),
+  limit: z.number().optional().describe("Maximum number of stations to return (default: 3)"),
+};
 
-const replyWithTodos = (message) => ({
-  content: message ? [{ type: "text", text: message }] : [],
-  structuredContent: { tasks: todos },
-});
+// Tool execution functions
+function findStations(args) {
+  const { origin, destination, fuelType = "diesel" } = args;
 
-function createTodoServer() {
-  const server = new McpServer({ name: "todo-app", version: "0.1.0" });
-
-  registerAppResource(
-    server,
-    "todo-widget",
-    "ui://widget/todo.html",
-    {},
-    async () => ({
-      contents: [
-        {
-          uri: "ui://widget/todo.html",
-          mimeType: RESOURCE_MIME_TYPE,
-          text: todoHtml,
-        },
-      ],
-    }),
+  const stations = stationsMock.stations.sort(
+    (a, b) => a.prices[fuelType] - b.prices[fuelType],
   );
 
-  registerAppTool(
-    server,
-    "add_todo",
-    {
-      title: "Add todo",
-      description: "Creates a todo item with the given title.",
-      inputSchema: addTodoInputSchema,
-      _meta: {
-        ui: { resourceUri: "ui://widget/todo.html" },
+  return {
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify(
+          {
+            route: `${origin} → ${destination}`,
+            stations: stations,
+            totalStations: stations.length,
+          },
+          null,
+          2,
+        ),
       },
-    },
-    async (args) => {
-      const title = args?.title?.trim?.() ?? "";
-      if (!title) return replyWithTodos("Missing title.");
-      const todo = { id: `todo-${nextId++}`, title, completed: false };
-      todos = [...todos, todo];
-      return replyWithTodos(`Added "${todo.title}".`);
-    },
+    ],
+  };
+}
+
+function getBestOffers(args) {
+  const stationsWithOffers = stationsMock.stations.filter(
+    (s) => s.offers.length > 0,
   );
 
-  registerAppTool(
-    server,
-    "complete_todo",
-    {
-      title: "Complete todo",
-      description: "Marks a todo as done by id.",
-      inputSchema: completeTodoInputSchema,
-      _meta: {
-        ui: { resourceUri: "ui://widget/todo.html" },
+  return {
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify(
+          {
+            stationsWithOffers,
+            total: stationsWithOffers.length,
+          },
+          null,
+          2,
+        ),
       },
-    },
-    async (args) => {
-      const id = args?.id;
-      if (!id) return replyWithTodos("Missing todo id.");
-      const todo = todos.find((task) => task.id === id);
-      if (!todo) {
-        return replyWithTodos(`Todo ${id} was not found.`);
-      }
+    ],
+  };
+}
 
-      todos = todos.map((task) =>
-        task.id === id ? { ...task, completed: true } : task,
-      );
+function getCheapestStations(args) {
+  const { fuelType, limit = 3 } = args;
 
-      return replyWithTodos(`Completed "${todo.title}".`);
+  const sorted = stationsMock.stations
+    .sort((a, b) => a.prices[fuelType] - b.prices[fuelType])
+    .slice(0, limit);
+
+  return {
+    content: [
+      {
+        type: "text",
+        text: JSON.stringify(
+          {
+            fuelType,
+            cheapestStations: sorted,
+            lowestPrice: sorted[0]?.prices[fuelType],
+          },
+          null,
+          2,
+        ),
+      },
+    ],
+  };
+}
+
+// Create Shell Stations MCP Server
+function createShellStationsServer() {
+  const server = new McpServer({
+    name: "shell-stations",
+    version: "1.0.0",
+  });
+
+  // Register tools
+  server.registerTool(
+    "find_stations_on_route",
+    {
+      description: "Find Shell gas stations along a route between two cities",
+      inputSchema: findStationsInputSchema,
     },
+    async (args) => findStations(args),
+  );
+
+  server.registerTool(
+    "get_best_offers",
+    {
+      description: "Get gas stations with active offers and promotions",
+      inputSchema: getBestOffersInputSchema,
+    },
+    async (args) => getBestOffers(args),
+  );
+
+  server.registerTool(
+    "get_cheapest_stations",
+    {
+      description: "Get the cheapest gas stations sorted by fuel price",
+      inputSchema: getCheapestStationsInputSchema,
+    },
+    async (args) => getCheapestStations(args),
   );
 
   return server;
 }
 
-const port = Number(process.env.PORT ?? 8787);
-const MCP_PATH = "/mcp";
+// Detect mode: stdio or HTTP
+const isStdioMode = !process.env.PORT && !process.stdin.isTTY;
 
-const httpServer = createServer(async (req, res) => {
-  if (!req.url) {
-    res.writeHead(400).end("Missing URL");
-    return;
-  }
+if (isStdioMode) {
+  // STDIO MODE for Claude Desktop
+  console.error("Starting Shell MCP server in stdio mode...");
 
-  const url = new URL(req.url, `http://${req.headers.host ?? "localhost"}`);
+  const server = createShellStationsServer();
+  const transport = new StdioServerTransport();
 
-  if (req.method === "OPTIONS" && url.pathname === MCP_PATH) {
-    res.writeHead(204, {
-      "Access-Control-Allow-Origin": "*",
-      "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
-      "Access-Control-Allow-Headers": "content-type, mcp-session-id",
-      "Access-Control-Expose-Headers": "Mcp-Session-Id",
-    });
-    res.end();
-    return;
-  }
+  await server.connect(transport);
+  console.error("Shell MCP server ready (stdio mode)");
+} else {
+  // HTTP MODE for Render/web
+  const port = Number(process.env.PORT ?? 8787);
+  const MCP_PATH = "/mcp";
 
-  if (req.method === "GET" && url.pathname === "/") {
-    res
-      .writeHead(200, { "content-type": "text/plain" })
-      .end("Todo MCP server is running!");
-    return;
-  }
-
-  const MCP_METHODS = new Set(["POST", "GET", "DELETE"]);
-  if (url.pathname === MCP_PATH && req.method && MCP_METHODS.has(req.method)) {
-    res.setHeader("Access-Control-Allow-Origin", "*");
-    res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id");
-
-    const server = createTodoServer();
-    const transport = new StreamableHTTPServerTransport({
-      sessionIdGenerator: undefined,
-      enableJsonResponse: true,
-    });
-
-    res.on("close", () => {
-      transport.close();
-      server.close();
-    });
-
-    try {
-      await server.connect(transport);
-      await transport.handleRequest(req, res);
-    } catch (error) {
-      console.error("Error handling MCP request:", error);
-      if (!res.headersSent) {
-        res.writeHead(500).end("Internal server error");
-      }
+  const httpServer = createServer(async (req, res) => {
+    if (!req.url) {
+      res.writeHead(400).end("Missing URL");
+      return;
     }
-    return;
-  }
 
-  res.writeHead(404).end("Not Found");
-});
+    const url = new URL(req.url, `http://${req.headers.host ?? "localhost"}`);
 
-httpServer.listen(port, "0.0.0.0", () => {
-  console.log(`MCP server listening on port ${port}${MCP_PATH}`);
-});
+    if (req.method === "OPTIONS" && url.pathname === MCP_PATH) {
+      res.writeHead(204, {
+        "Access-Control-Allow-Origin": "*",
+        "Access-Control-Allow-Methods": "POST, GET, OPTIONS",
+        "Access-Control-Allow-Headers": "content-type, mcp-session-id",
+        "Access-Control-Expose-Headers": "Mcp-Session-Id",
+      });
+      res.end();
+      return;
+    }
+
+    if (req.method === "GET" && url.pathname === "/") {
+      res
+        .writeHead(200, { "content-type": "text/plain" })
+        .end("Shell Stations MCP server is running!");
+      return;
+    }
+
+    const MCP_METHODS = new Set(["POST", "GET", "DELETE"]);
+    if (
+      url.pathname === MCP_PATH &&
+      req.method &&
+      MCP_METHODS.has(req.method)
+    ) {
+      res.setHeader("Access-Control-Allow-Origin", "*");
+      res.setHeader("Access-Control-Expose-Headers", "Mcp-Session-Id");
+
+      const server = createShellStationsServer();
+      const transport = new StreamableHTTPServerTransport({
+        sessionIdGenerator: undefined,
+        enableJsonResponse: true,
+      });
+
+      res.on("close", () => {
+        transport.close();
+        server.close();
+      });
+
+      try {
+        await server.connect(transport);
+        await transport.handleRequest(req, res);
+      } catch (error) {
+        console.error("Error handling MCP request:", error);
+        if (!res.headersSent) {
+          res.writeHead(500).end("Internal server error");
+        }
+      }
+      return;
+    }
+
+    res.writeHead(404).end("Not Found");
+  });
+
+  httpServer.listen(port, "0.0.0.0", () => {
+    console.error(`Shell MCP server listening on port ${port}${MCP_PATH}`);
+  });
+}
