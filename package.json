@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "type": "module",
   "scripts": {
-    "start": "node src/server.js"
+    "start": "PORT=8787 node src/server.js"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.4",
